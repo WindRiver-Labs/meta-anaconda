@@ -80,7 +80,7 @@ index be3530e59..3525e7ca6 100644
 -                         if fnmatch(f, "/boot/vmlinuz-*") or
 -                         fnmatch(f, "/boot/efi/EFI/%s/vmlinuz-*" % conf.bootloader.efi_dir)))
 +                         if (fnmatch(f, "/boot/*") or fnmatch(f, "/boot/efi/EFI/%s/*" % conf.bootloader.efi_dir))
-+                            and len(f.split("/")[-1]) > 7))
++                            and len(f.split("/")[-1]) > 7 and not f.endswith('.sig')))
 +
 +        log.info("kernelVersionList %s" % files)
  
