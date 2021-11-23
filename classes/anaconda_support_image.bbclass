@@ -3,6 +3,7 @@ IMAGE_FEATURES_append = " anaconda-support package-management"
 
 # Generate filesystem images for image copy install
 IMAGE_FSTYPES += "ext4"
+IMAGE_FSTYPES_remove = "live"
 
 ROOTFS_POSTPROCESS_COMMAND_append = " copy_grub_lib;"
 IMAGE_POSTPROCESS_COMMAND_append = " emit_image_env;"
