@@ -18,14 +18,19 @@ Signed-off-by: Hongxu Jia <hongxu.jia@windriver.com>
 Update context for anaconda 32.
 
 Signed-off-by: Kai Kang <kai.kang@windriver.com>
+
+Set GRUB_DISTRIBUTOR with target system info rather than installer
+image.
+
+Signed-off-by: Kai Kang <kai.kang@windriver.com>
 ---
  pyanaconda/bootloader/base.py         |  4 ++++
- pyanaconda/bootloader/grub2.py        | 26 +++++++++++++++++---------
+ pyanaconda/bootloader/grub2.py        | 40 +++++++++++++++++++++++++++--------
  pyanaconda/bootloader/installation.py |  3 +++
- 3 files changed, 24 insertions(+), 9 deletions(-)
+ 3 files changed, 38 insertions(+), 9 deletions(-)
 
 diff --git a/pyanaconda/bootloader/base.py b/pyanaconda/bootloader/base.py
-index f1aa6acca6..bac6d6137c 100644
+index f1aa6acca..bac6d6137 100644
 --- a/pyanaconda/bootloader/base.py
 +++ b/pyanaconda/bootloader/base.py
 @@ -902,6 +902,10 @@ class BootLoader(object):
@@ -40,7 +45,7 @@ index f1aa6acca6..bac6d6137c 100644
              os.rename(config_path, config_path + ".anacbak")
  
 diff --git a/pyanaconda/bootloader/grub2.py b/pyanaconda/bootloader/grub2.py
-index 4695c1cd45..1d1302681b 100644
+index 4695c1cd4..c1444cd4b 100644
 --- a/pyanaconda/bootloader/grub2.py
 +++ b/pyanaconda/bootloader/grub2.py
 @@ -100,9 +100,9 @@ class GRUB2(BootLoader):
@@ -66,19 +71,33 @@ index 4695c1cd45..1d1302681b 100644
          if os.access(map_path, os.R_OK):
              os.rename(map_path, map_path + ".anacbak")
  
-@@ -254,9 +258,9 @@ class GRUB2(BootLoader):
+@@ -254,9 +258,23 @@ class GRUB2(BootLoader):
          defaults_file = "%s%s" % (conf.target.system_root, self.defaults_file)
          defaults = open(defaults_file, "w+")
          defaults.write("GRUB_TIMEOUT=%d\n" % self.timeout)
 -        defaults.write("GRUB_DISTRIBUTOR=\"$(sed 's, release .*$,,g' /etc/system-release)\"\n")
-+        defaults.write("GRUB_DISTRIBUTOR=\"%s\"\n" % productName)
++
++        targetProductName = ''
++        try:
++            with open(conf.target.system_root + '/etc/issue') as f:
++                for line in f:
++                    strippedline = line.strip().replace(r' \n \l', '')
++                    if strippedline:
++                        targetProductName = strippedline
++                        break
++        except FileNotFoundError:
++            pass
++
++        defaults.write("GRUB_DISTRIBUTOR=\"%s\"\n" % targetProductName
++                       if targetProductName else productName)
++
          defaults.write("GRUB_DEFAULT=saved\n")
 -        defaults.write("GRUB_DISABLE_SUBMENU=true\n")
 +        defaults.write("GRUB_DISABLE_SUBMENU=y\n")
          if self.console and self.has_serial_console:
              defaults.write("GRUB_TERMINAL=\"serial console\"\n")
              defaults.write("GRUB_SERIAL_COMMAND=\"%s\"\n" % self.serial_command)
-@@ -298,7 +302,7 @@ class GRUB2(BootLoader):
+@@ -298,7 +316,7 @@ class GRUB2(BootLoader):
          passwords = "%s\n%s\n" % (self.password, self.password)
          os.write(pwrite, passwords.encode("utf-8"))
          os.close(pwrite)
@@ -87,7 +106,7 @@ index 4695c1cd45..1d1302681b 100644
                                     stdin=pread,
                                     root=conf.target.system_root)
          os.close(pread)
-@@ -311,6 +315,10 @@ class GRUB2(BootLoader):
+@@ -311,6 +329,10 @@ class GRUB2(BootLoader):
              return
  
          users_file = "%s%s/%s" % (conf.target.system_root, self.config_dir, self._passwd_file)
@@ -98,7 +117,7 @@ index 4695c1cd45..1d1302681b 100644
          header = util.open_with_perm(users_file, "w", 0o700)
          # XXX FIXME: document somewhere that the username is "root"
          self._encrypt_password()
-@@ -344,21 +352,21 @@ class GRUB2(BootLoader):
+@@ -344,21 +366,21 @@ class GRUB2(BootLoader):
                  machine_id = fd.readline().strip()
  
              default_entry = "%s-%s" % (machine_id, self.default.version)
@@ -123,7 +142,7 @@ index 4695c1cd45..1d1302681b 100644
                                  ["-o", self.config_file])
          if rc:
              raise BootLoaderError("failed to write boot loader configuration")
-@@ -425,7 +433,7 @@ class GRUB2(BootLoader):
+@@ -425,7 +447,7 @@ class GRUB2(BootLoader):
                  else:
                      log.info("bootloader.py: mbr will be updated for grub2")
  
@@ -133,7 +152,7 @@ index 4695c1cd45..1d1302681b 100644
                                         env_prune=['MALLOC_PERTURB_'])
              if rc:
 diff --git a/pyanaconda/bootloader/installation.py b/pyanaconda/bootloader/installation.py
-index 5ed5c46423..c7c158007a 100644
+index 5ed5c4642..52f3ba1dc 100644
 --- a/pyanaconda/bootloader/installation.py
 +++ b/pyanaconda/bootloader/installation.py
 @@ -130,6 +130,9 @@ def _write_sysconfig_kernel(sysroot, storage):
